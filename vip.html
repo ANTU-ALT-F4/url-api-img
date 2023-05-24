@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Trình chạy NFA</title>
+  <style>
+    table {
+      border-collapse: collapse;
+    }
+
+    th, td {
+      border: 1px solid black;
+      padding: 8px;
+      text-align: center;
+    }
+
+    th {
+      background-color: #f2f2f2;
+    }
+
+    input {
+      width: 100%;
+    }
+
+    #network {
+      width: 600px;
+      height: 400px;
+      margin: 20px auto;
+    }
+  </style>
+  <script src="https://visjs.github.io/vis-network/standalone/umd/vis-network.min.js"></script>
+</head>
+<body>
+  <h2>Trình chạy NFA</h2>
+
+  <h3>NFA</h3>
+  <label for="states">Trạng thái (Q):</label>
+  <input type="text" id="states" value="q0, q1, q2, q3"><br>
+
+  <label for="alphabet">Bảng chữ cái (Σ):</label>
+  <input type="text" id="alphabet" value="0, 1"><br>
+
+  <label for="initial-state">Trạng thái ban đầu (q0):</label>
+  <input type="text" id="initial-state" value="q0"><br>
+
+  <label for="accepting-states">Trạng thái chấp nhận (F):</label>
+  <input type="text" id="accepting-states" value="q1, q2"><br>
+
+  <label for="input-string">Chuỗi w:</label>
+  <input type="text" id="input-string" value="101101"><br>
+
+  <button onclick="checkAccepted()">Kiểm tra</button>
+  <br>
+  <h3>Kết quả</h3>
+  <p id="result"></p>
+
+  <h3>Bảng Hàm chuyển Trạng thái</h3>
+  <table id="transition-table">
+    <thead>
+      <tr>
+        <th>Trạng thái</th>
+        <th>0</th>
+        <th>1</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>q0</td>
+        <td><input type="text" class="transition-input" data-state="q0" data-input="0"></td>
+        <td><input type="text" class="transition-input" data-state="q0" data-input="1"></td>
+      </tr>
+      <tr>
+        <td>q1</td>
+        <td><input type="text" class="transition-input" data-state="q1" data-input="0"></td>
+        <td><input type="text" class="transition-input" data-state="q1" data-input="1"></td>
+      </tr>
+      <tr>
+        <td>q2</td>
+        <td><input type="text" class="transition-input" data-state="q2" data-input="0"></td>
+        <td><input type="text" class="transition-input" data-state="q2" data-input="1"></td>
+      </tr>
+      <tr>
+        <td>q3</td>
+        <td><input type="text" class="transition-input" data-state="q3" data-input="0"></td>
+        <td><input type="text" class="transition-input" data-state="q3" data-input="1"></td>
+      </tr>
+    </tbody>
+  </table>
+
+  <br>
+  <button onclick="addRow()">Thêm hàng</button>
+  <button onclick="addColumn()">Thêm cột</button>
+
+  <div id="network"></div>
+
+  <script>
+    var network = null;
+    var networkContainer = document.getElementById("network");
+
+    function checkAccepted() {
+      // Get NFA information
+      var states = document.getElementById("states").value.split(",").map(function(state) {
+        return state.trim();
+      });
+
+      var alphabet = document.getElementById("alphabet").value.split(",").map(function(symbol) {
+        return symbol.trim();
+      });
+
+      var initialState = document.getElementById("initial-state").value.trim();
+
+      var acceptingStates = document.getElementById("accepting-states").value.split(",").map(function(state) {
+        return state.trim();
+      });
+
+      var inputString = document.getElementById("input-string").value.trim();
+
+
+      // Get Transition Table data
+      var transitionTable = {};
+
+      var tableInputs = document.getElementsByClassName("transition-input");
+      for (var i = 0; i < tableInputs.length; i++) {
+        var input = tableInputs[i];
+        var state = input.getAttribute("data-state");
+        var symbol = input.getAttribute("data-input");
+        var nextState = input.value.trim();
+
+        if (!transitionTable[state]) {
+          transitionTable[state] = {};
+        }
+
+        transitionTable[state][symbol] = nextState;
+      }
+
+      // Check if the input string is accepted
+      var currentState = initialState;
+      for (var j = 0; j < inputString.length; j++) {
+        var inputSymbol = inputString[j];
+        if (transitionTable[currentState] && transitionTable[currentState][inputSymbol]) {
+          currentState = transitionTable[currentState][inputSymbol];
+        } else {
+          currentState = null;
+          break;
+        }
+      }
+
+      var isAccepted = acceptingStates.includes(currentState);
+
+
+      // Display the result
+      var result = document.getElementById("result");
+      if (isAccepted) {
+        result.innerText = "Chuỗi w được đoán nhận bởi NFA.";
+      } else {
+        result.innerText = "Chuỗi w không được đoán nhận bởi NFA.";
+      }
+
+      // Draw the state transition diagram
+      drawStateDiagram(states, alphabet, transitionTable, initialState, acceptingStates);
+    }
+
+    function drawStateDiagram(states, alphabet, transitionTable, initialState, acceptingStates) {
+      var nodes = [];
+      var edges = [];
+
+      // Add nodes
+      for (var i = 0; i < states.length; i++) {
+        var state = states[i];
+        var isAccepting = acceptingStates.includes(state);
+        var shape = isAccepting ? "ellipse" : "circle";
+
+        nodes.push({
+          id: state,
+          label: state,
+          shape: shape,
+          color: isAccepting ? "#97C2FC" : "#FFA07A"
+        });
+      }
+
+      // Add edges
+      for (var state in transitionTable) {
+        if (transitionTable.hasOwnProperty(state)) {
+          var transitions = transitionTable[state];
+          for (var input in transitions) {
+            if (transitions.hasOwnProperty(input)) {
+              var nextState = transitions[input];
+              edges.push({
+                from: state,
+                to: nextState,
+                label: input
+              });
+            }
+          }
+        }
+      }
+
+      // Create a data object
+      var data = {
+        nodes: nodes,
+        edges: edges
+      };
+
+      // Create the network
+      if (network === null) {
+        network = new vis.Network(networkContainer, data, {});
+      } else {
+        network.setData(data);
+      }
+    }
+    
+    function addRow() {
+      var table = document.getElementById("transition-table");
+      var rowCount = table.rows.length;
+      var stateCount = rowCount - 1;
+      var alphabetCount = table.rows[0].cells.length - 1;
+      
+      var row = table.insertRow(rowCount);
+      var stateCell = row.insertCell(0);
+      stateCell.innerHTML = "q" + stateCount;
+      
+      for (var i = 0; i < alphabetCount; i++) {
+        var inputCell = row.insertCell(i + 1);
+        var input = document.createElement("input");
+        input.setAttribute("type", "text");
+        input.setAttribute("class", "transition-input");
+        input.setAttribute("data-state", "q" + stateCount);
+        input.setAttribute("data-input", i);
+        inputCell.appendChild(input);
+      }
+    }
+    
+    function addColumn() {
+      var table = document.getElementById("transition-table");
+      var rowCount = table.rows.length;
+      var alphabetCount = table.rows[0].cells.length;
+      
+      var headerRow = table.rows[0];
+      var headerCell = document.createElement("th");
+      headerCell.innerHTML = alphabetCount;
+      headerRow.appendChild(headerCell);
+      
+      for (var i = 1; i < rowCount; i++) {
+        var row = table.rows[i];
+        var inputCell = row.insertCell(alphabetCount);
+        var input = document.createElement("input");
+        input.setAttribute("type", "text");
+        input.setAttribute("class", "transition-input");
+        input.setAttribute("data-state", row.cells[0].innerHTML);
+        input.setAttribute("data-input", alphabetCount - 1);
+        inputCell.appendChild(input);
+      }
+    }
+  </script>
+</body>
+</html>

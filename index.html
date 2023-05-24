@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Upload Image and Show Image with Link</title>
+  </head>
+  <body>
+    <div class="container">
+      <h1>Upload Image and Show Image with Link</h1>
+
+      <div class="form-group">
+        <label for="inputName">Select an image to upload:</label>
+        <input type="file" class="form-control" id="inputName" name="image">
+      </div>
+
+      <div class="form-group">
+        <label for="imageUrl">Image URL:</label>
+        <input type="text" class="form-control" id="imageUrl" name="imageUrl" readonly>
+      </div>
+
+      <div id="imageContainer"></div>
+
+      <button type="button" class="btn btn-primary" onclick="showImage()">Show Image</button>
+    </div>
+
+    <script>
+      async function uploadImage() {
+        const inputName = document.getElementById("inputName");
+        const imageUrl = document.getElementById("imageUrl");
+        const imageContainer = document.getElementById("imageContainer");
+
+        if (inputName.files && inputName.files[0]) {
+          const formData = new FormData();
+          formData.append("image", inputName.files[0]);
+
+          const response = await fetch("https://api.imgur.com/3/image", {
+            method: "POST",
+            headers: {
+              Authorization: "Client-ID c8dd68bf721b5af"
+            },
+            body: formData
+          });
+
+          const data = await response.json();
+          imageUrl.value = data.data.link;
+
+          if (isValidImageUrl(imageUrl.value)) {
+            const img = document.createElement("img");
+            img.src = imageUrl.value;
+            img.alt = "Uploaded Image";
+            imageContainer.innerHTML = "";
+            imageContainer.appendChild(img);
+          } else {
+            imageContainer.innerHTML = "Invalid image URL.";
+          }
+        }
+      }
+
+      function isValidImageUrl(url) {
+        return (url.match(/\.(jpeg|jpg|gif|png)$/) != null);
+      }
+
+      function showImage() {
+        uploadImage();
+      }
+    </script>
+  </body>
+</html>
